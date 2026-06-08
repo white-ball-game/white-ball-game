@@ -3,27 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>反転白玉ゲーム</title>
+<title>フリップストーン</title>
 
 <style>
+*{
+    box-sizing:border-box;
+}
+
 body{
     font-family:sans-serif;
     text-align:center;
     background:#f2f2f2;
-    margin:20px;
+    margin:10px;
 }
 
 h1{
-    margin-bottom:10px;
+    margin:10px 0;
 }
 
 #controls{
-    margin-bottom:15px;
+    margin-bottom:10px;
 }
 
 #info{
-    margin:15px;
+    margin:10px;
     font-size:18px;
+}
+
+#boardWrapper{
+    width:100%;
+    overflow:auto;
 }
 
 #board{
@@ -31,6 +40,7 @@ h1{
     gap:2px;
     justify-content:center;
     margin:auto;
+    width:max-content;
 }
 
 .cell{
@@ -38,7 +48,6 @@ h1{
     border:1px solid #999;
     cursor:pointer;
     position:relative;
-    box-sizing:border-box;
 }
 
 .cell.white::after,
@@ -61,8 +70,7 @@ h1{
 }
 
 button{
-    padding:8px 15px;
-    margin:5px;
+    padding:8px 14px;
     font-size:16px;
 }
 
@@ -76,56 +84,51 @@ input{
 
 <body>
 
-<h1>反転白玉ゲーム</h1>
+<h1>フリップストーン</h1>
 
 <div id="controls">
-    盤面サイズ:
-    <input
-        type="number"
-        id="sizeInput"
-        min="2"
-        max="50"
-        value="12">
-
-    <button onclick="startNewGame()">
-        新しいゲーム
-    </button>
+    盤面サイズ：
+    <input type="number" id="sizeInput" min="2" max="50" value="12">
+    <button onclick="startNewGame()">新しいゲーム</button>
 </div>
 
 <div id="info">
 最初の白玉を置いてください
 </div>
 
-<div id="board"></div>
+<div id="boardWrapper">
+    <div id="board"></div>
+</div>
 
 <script>
 
 let SIZE = 12;
-let CELL_SIZE = 45;
+let CELL_SIZE = 40;
 
 let board = [];
 let firstMove = true;
 
-const boardElement =
-    document.getElementById("board");
-
-const info =
-    document.getElementById("info");
+const boardElement = document.getElementById("board");
+const info = document.getElementById("info");
 
 function getCellSize(){
 
-    if(SIZE <= 10) return 45;
-    if(SIZE <= 20) return 35;
-    if(SIZE <= 30) return 28;
+    const width = window.innerWidth;
 
-    return 22;
+    const size =
+        Math.floor((width - 40) / SIZE);
+
+    return Math.max(
+        12,
+        Math.min(45, size)
+    );
 }
 
 function initBoard(){
 
     board = Array.from(
         {length:SIZE},
-        ()=>Array(SIZE).fill(0)
+        () => Array(SIZE).fill(0)
     );
 }
 
@@ -157,7 +160,7 @@ function render(){
             }
 
             cell.onclick =
-                ()=>clickCell(x,y);
+                () => clickCell(x,y);
 
             boardElement.appendChild(cell);
         }
@@ -187,11 +190,11 @@ function render(){
         Math.floor(CELL_SIZE * 0.7);
 
     style.textContent = `
-        .cell.white::after,
-        .cell.black::after{
-            width:${stoneSize}px;
-            height:${stoneSize}px;
-        }
+    .cell.white::after,
+    .cell.black::after{
+        width:${stoneSize}px;
+        height:${stoneSize}px;
+    }
     `;
 }
 
@@ -291,35 +294,31 @@ function clickCell(x,y){
 function checkClear(){
 
     let filled = 0;
+    let white = 0;
+    let black = 0;
 
     for(let y=0;y<SIZE;y++){
+
         for(let x=0;x<SIZE;x++){
+
             if(board[y][x] !== 0){
                 filled++;
+            }
+
+            if(board[y][x] === 1){
+                white++;
+            }
+
+            if(board[y][x] === 2){
+                black++;
             }
         }
     }
 
     if(filled === SIZE * SIZE){
 
-        let white = 0;
-        let black = 0;
-
-        for(let y=0;y<SIZE;y++){
-            for(let x=0;x<SIZE;x++){
-
-                if(board[y][x] === 1){
-                    white++;
-                }
-
-                if(board[y][x] === 2){
-                    black++;
-                }
-            }
-        }
-
         info.textContent =
-            `完成！ 白:${white}　黒:${black}`;
+            `完成！ 白:${white} 黒:${black}`;
     }
 }
 
@@ -351,9 +350,6 @@ function startNewGame(){
     boardElement.style.gridTemplateColumns =
         `repeat(${SIZE}, ${CELL_SIZE}px)`;
 
-    boardElement.style.gridTemplateRows =
-        `repeat(${SIZE}, ${CELL_SIZE}px)`;
-
     initBoard();
 
     firstMove = true;
@@ -363,6 +359,20 @@ function startNewGame(){
 
     render();
 }
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        CELL_SIZE =
+            getCellSize();
+
+        boardElement.style.gridTemplateColumns =
+            `repeat(${SIZE}, ${CELL_SIZE}px)`;
+
+        render();
+    }
+);
 
 startNewGame();
 
