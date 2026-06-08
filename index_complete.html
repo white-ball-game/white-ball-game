@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>フリップストーン</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    font-family:sans-serif;
+    text-align:center;
+    background:#f2f2f2;
+    margin:10px;
+}
+
+h1{
+    margin:10px 0;
+}
+
+#controls{
+    margin-bottom:10px;
+}
+
+#info{
+    margin:10px;
+    font-size:18px;
+}
+
+#boardWrapper{
+    width:100%;
+    overflow:auto;
+}
+
+#board{
+    display:grid;
+    gap:2px;
+    justify-content:center;
+    margin:auto;
+    width:max-content;
+}
+
+.cell{
+    background:#d0d0d0;
+    border:1px solid #999;
+    cursor:pointer;
+    position:relative;
+}
+
+.cell.white::after,
+.cell.black::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+}
+
+.cell.white::after{
+    background:white;
+    border:1px solid #666;
+}
+
+.cell.black::after{
+    background:black;
+}
+
+button{
+    padding:8px 14px;
+    font-size:16px;
+}
+
+input{
+    width:70px;
+    text-align:center;
+    font-size:16px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>フリップストーン</h1>
+
+<div id="controls">
+    盤面サイズ：
+    <select id="sizeInput"></select>
+    <button onclick="startNewGame()">新しいゲーム</button>
+    <button onclick="undoMove()">1手戻す</button>
+</div>
+
+<div id="info">
+最初の白玉を置いてください
+</div>
+
+<div id="boardWrapper">
+    <div id="board"></div>
+</div>
+
+<script>
+
+let SIZE = 9;
+let CELL_SIZE = 40;
+
+let board = [];
+let firstMove = true;
+let history = [];
+
+const boardElement = document.getElementById("board");
+const info = document.getElementById("info");
+
+const sizeSelect = document.getElementById("sizeInput");
+for(let i=3;i<=25;i++){
+ const option=document.createElement("option");
+ option.value=i; option.textContent=`${i}×${i}`;
+ if(i===9) option.selected=true;
+ sizeSelect.appendChild(option);
+}
+
+function getCellSize(){
+
+    const width = window.innerWidth;
+
+    const size =
+        Math.floor((width - 40) / SIZE);
+
+    return Math.max(
+        12,
+        Math.min(45, size)
+    );
+}
+
+function initBoard(){
+
+    board = Array.from(
+        {length:SIZE},
+        () => Array(SIZE).fill(0)
+    );
+}
+
+
+function saveHistory(){
+ history.push({board: board.map(row=>[...row]), firstMove:firstMove});
+}
+
+function undoMove(){
+ if(history.length===0)return;
+ const state=history.pop();
+ board=state.board.map(row=>[...row]);
+ firstMove=state.firstMove;
+ render();
+ info.textContent=firstMove?"最初の白玉を置いてください":"空いているマスをクリックしてください";
+}
+
+function render(){
+
+    boardElement.innerHTML = "";
+
+    for(let y=0;y<SIZE;y++){
+
+        for(let x=0;x<SIZE;x++){
+
+            const cell =
+                document.createElement("div");
+
+            cell.className = "cell";
+
+            cell.style.width =
+                CELL_SIZE + "px";
+
+            cell.style.height =
+                CELL_SIZE + "px";
+
+            if(board[y][x] === 1){
+                cell.classList.add("white");
+            }
+
+            if(board[y][x] === 2){
+                cell.classList.add("black");
+            }
+
+            cell.onclick =
+                () => clickCell(x,y);
+
+            boardElement.appendChild(cell);
+        }
+    }
+
+    let style =
+        document.getElementById(
+            "stoneStyle"
+        );
+
+    if(!style){
+
+        style =
+            document.createElement(
+                "style"
+            );
+
+        style.id =
+            "stoneStyle";
+
+        document.head.appendChild(
+            style
+        );
+    }
+
+    const stoneSize =
+        Math.floor(CELL_SIZE * 0.7);
+
+    style.textContent = `
+    .cell.white::after,
+    .cell.black::after{
+        width:${stoneSize}px;
+        height:${stoneSize}px;
+    }
+    `;
+}
+
+function hasAdjacentStone(x,y){
+
+    const dirs = [
+        [0,-1],
+        [0,1],
+        [-1,0],
+        [1,0]
+    ];
+
+    for(const [dx,dy] of dirs){
+
+        const nx = x + dx;
+        const ny = y + dy;
+
+        if(
+            nx >= 0 &&
+            nx < SIZE &&
+            ny >= 0 &&
+            ny < SIZE &&
+            board[ny][nx] !== 0
+        ){
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function flipAdjacent(x,y){
+
+    const dirs = [
+        [0,-1],
+        [0,1],
+        [-1,0],
+        [1,0]
+    ];
+
+    for(const [dx,dy] of dirs){
+
+        const nx = x + dx;
+        const ny = y + dy;
+
+        if(
+            nx < 0 ||
+            nx >= SIZE ||
+            ny < 0 ||
+            ny >= SIZE
+        ){
+            continue;
+        }
+
+        if(board[ny][nx] === 1){
+            board[ny][nx] = 2;
+        }
+        else if(board[ny][nx] === 2){
+            board[ny][nx] = 1;
+        }
+    }
+}
+
+function clickCell(x,y){
+
+    if(board[y][x] !== 0){
+        return;
+    }
+
+    if(firstMove){
+
+        saveHistory();
+
+        board[y][x] = 1;
+
+        firstMove = false;
+
+        info.textContent =
+            "空いているマスをクリックしてください";
+
+        render();
+
+        return;
+    }
+
+    if(!hasAdjacentStone(x,y)){
+        return;
+    }
+
+    saveHistory();
+
+    board[y][x] = 1;
+
+    flipAdjacent(x,y);
+
+    render();
+
+    checkClear();
+}
+
+function checkClear(){
+
+    let filled = 0;
+    let white = 0;
+    let black = 0;
+
+    for(let y=0;y<SIZE;y++){
+
+        for(let x=0;x<SIZE;x++){
+
+            if(board[y][x] !== 0){
+                filled++;
+            }
+
+            if(board[y][x] === 1){
+                white++;
+            }
+
+            if(board[y][x] === 2){
+                black++;
+            }
+        }
+    }
+
+    if(filled === SIZE * SIZE){
+
+        info.textContent =
+            `完成！`;
+    }
+}
+
+function startNewGame(){
+
+    const value =
+        parseInt(
+            document.getElementById(
+                "sizeInput"
+            ).value
+        );
+
+    if(
+        isNaN(value) ||
+        value < 3 ||
+        value > 25
+    ){
+        alert(
+            "3～25を選択してください"
+        );
+        return;
+    }
+
+    SIZE = value;
+
+    CELL_SIZE =
+        getCellSize();
+
+    boardElement.style.gridTemplateColumns =
+        `repeat(${SIZE}, ${CELL_SIZE}px)`;
+
+    initBoard();
+
+    history = [];
+
+    firstMove = true;
+
+    info.textContent =
+        "最初の白玉を置いてください";
+
+    render();
+}
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        CELL_SIZE =
+            getCellSize();
+
+        boardElement.style.gridTemplateColumns =
+            `repeat(${SIZE}, ${CELL_SIZE}px)`;
+
+        render();
+    }
+);
+
+startNewGame();
+
+</script>
+
+</body>
+</html>
